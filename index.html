@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nuclear power</title>
+  <link rel="shortcut icon" type="image/jpg" href="https://icon-library.com/images/nuclear-icon/nuclear-icon-2.jpg"/>
+  <style>
+    body {
+      background-image: url("https://i.gifer.com/Nv2.gif");
+      position: relative;
+    }
+
+    .info__panel {
+      position: fixed;
+      top: 1rem;
+      left: 1rem;
+      padding: 0.5rem 1rem;
+      width: 400px;
+      background: rgba(0, 0, 0, 0.788);
+      color: rgb(17, 235, 46);
+      border: 3px solid rgb(0, 255, 13);
+      border-radius: 1rem;
+    }
+    .info__title {
+      text-align: center;
+    }
+
+    .info__panel hr {
+      border-color: rgb(0, 255, 34);
+    }
+
+    .connection {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .connection__host {
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .connection__status {
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .control__panel {
+      position: fixed;
+      display: flex;
+      width: 100%;
+      height: 100px;
+      background: rgb(28, 78, 28);
+      bottom: 0;
+    }
+
+    .lever {
+      height: 100%;
+      width: 25%;
+      border: 8px solid rgb(0, 0, 0);
+    }
+
+    .lever._active {
+      background-color: rgb(2, 255, 2);
+    }
+
+    .token {
+      position: fixed;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      top: -100vh;
+      bottom: 100vh;
+      right: 0;
+      left: 0;
+      background: rgba(0, 0, 0, 0.3);
+      backdrop-filter: blur(20px);
+      transition: 3s;
+    }
+    .token._succes {
+      top: 0;
+      bottom: 0;
+    }
+    .token__text {
+      padding: 1rem 2rem;
+      width: 500px;
+      height: 250px;
+      background: rgba(51, 105, 54, 0.404);
+      border-radius: 20px;
+      border: 2px solid green;
+      color: rgb(77, 211, 77);
+    }
+
+    .token__text legend {
+      border: 1px solid;
+      background: #000;
+      padding: 0.2rem 0.5rem;
+    }
+
+    .token__output {
+      overflow-wrap: anywhere;
+    }
+
+    .camera {
+      background-color: #000;
+      margin: 0;
+      padding: 0;
+      width: 400px;
+      overflow: hidden;
+      border: 5px solid rgb(35, 194, 15);
+      border-radius: 25px;
+      position: fixed;
+      right: 2rem;
+      top: 1rem;
+    }
+    .camera img {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: auto;
+    }
+    .video__live {
+      position: absolute;
+      color: #fff;
+      z-index: 1000;
+      top: 1rem;
+      right: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .video__dot {
+      width: 1rem;
+      height: 1rem;
+      border-radius: 100%;
+      background: rgba(255, 0, 0, 0.972);
+      margin: 0 0.5rem;
+      animation: blink 2s infinite;
+    }
+
+    @keyframes blink {
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="info__panel">
+    <h1 class="info__title">INFORMATION PANEL</h1>
+    <hr>
+    <div class="connection">
+      <div class="connection__host">
+        <h2 class="host__title">HOST:</h2>
+        <h2 class="host"></h2>
+      </div>
+      <div class="connection__status">
+        <h2 class="status__title">STATUS:</h2>
+        <h2 class="status__state">OFFLINE</h2>
+      </div>
+    </div>
+    <hr>
+  </div>
+  <div class="control__panel">
+    <div class="lever"></div>
+    <div class="lever"></div>
+    <div class="lever"></div>
+    <div class="lever"></div>
+  </div>
+  <div class="camera">
+    <img src="https://fhannum.files.wordpress.com/2012/12/nuclear_power_plant_isar_at_night.jpg?w=584" alt="NO SIGNAL">
+    <span class="video__live">LIVE <div class="video__dot"></div></span>
+  </div>
+  <div class="token">
+      <fieldset class="token__text">
+        <legend >TOKEN</legend>
+        <output class="token__output"></output>
+      </fieldset>
+  </div>
+  <script>
+    const levers = document.querySelector('.control__panel').children
+
+    const render = (arr) => {
+      for (const key in arr)
+      levers[key].classList.toggle('_active',arr[key])
+    }
+
+    function web(url, user) {
+      const ws = new WebSocket(url, user);
+      let levers = [false, false, false, false];
+
+      ws.onopen = (e) => { 
+        console.log('Connected to', e.target.url)
+        document.querySelector('.host').textContent = e.target.url;
+        document.querySelector('.status__state').textContent = e.type;
+      };
+      
+      ws.onclose = (e) => {
+
+        document.querySelector('.status__state').textContent = e.type;
+        document.querySelector('.token').classList.toggle('_succes')
+        console.log('Disconnected')
+      };
+
+      ws.onmessage = response => {
+        const data = JSON.parse(response.data);
+        const {
+          action = '',
+          pulled = '',
+          newState = '',
+          stateId,
+          lever2,
+          same,
+          token
+        } = data;
+        console.log(levers);
+        if (token) {
+          document.querySelector('.token__output').textContent = token;
+          ws.close();
+          return;
+        }
+
+        if (newState) {
+          console.log(data);
+          levers = [false, false, false, false];
+        }
+
+        if (levers[0] && levers[1] && levers[2] && levers[3]) {
+          ws.send(JSON.stringify({ action: 'powerOff', stateId }));
+        }
+
+        if (Number.isInteger(pulled)) {
+          levers[pulled] = !levers[pulled];
+          ws.send(JSON.stringify({ action: 'check', 'lever1': 0, 'lever2': pulled, stateId }));
+        }
+
+        if (action) {
+          if (same) {
+            levers[lever2] = levers[0];
+          } else {
+            levers[lever2] = !levers[0];
+          }
+        }
+        render(levers)
+      };
+    }
+    window.onload =  web('ws://vps.yojji.io', 'daniil_getin');
+  </script>
+</body>
+</html>
